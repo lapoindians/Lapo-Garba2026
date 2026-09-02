@@ -181,9 +181,11 @@
 
   .note{
     text-align:center;
-    font-size:0.78rem;
-    color:#9A7A82;
+    font-size:0.98rem;
+    font-weight:700;
+    color: var(--magenta-deep);
     margin-top:0.9rem;
+    line-height:1.4;
   }
 
   .success{
@@ -255,35 +257,6 @@
     line-height:1.6;
   }
   .footer-info b{ color: var(--purple-deep); }
-
-  .admin-toggle{
-    display:block;
-    text-align:center;
-    margin: 1.8rem auto 0;
-    font-size:0.75rem;
-    color:#B79098;
-    background:none;
-    border:none;
-    text-decoration:underline;
-    cursor:pointer;
-  }
-  .admin{
-    display:none;
-    margin: 0.8rem 1.1rem 0;
-    background:#FFFDF9;
-    border-radius:14px;
-    padding:1.1rem 1.2rem;
-    box-shadow: 0 8px 20px rgba(90,20,20,0.1);
-  }
-  .admin.show{ display:block; }
-  .admin h3{ font-family:'Yeseva One', serif; font-size:1.05rem; color:var(--purple-deep); margin:0 0 0.8rem; }
-  .admin-row{
-    display:flex; justify-content:space-between; gap:0.5rem;
-    font-size:0.8rem; padding:0.55rem 0; border-bottom:1px solid var(--line);
-  }
-  .admin-row:last-child{ border-bottom:none; }
-  .admin-empty{ font-size:0.85rem; color:#9A7A82; }
-  .admin-count{ font-size:0.8rem; color:#7A5A63; margin-bottom:0.6rem; }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
@@ -341,7 +314,7 @@
     </div>
 
     <button type="submit" class="btn" id="submitBtn">Submit RSVP</button>
-    <p class="note">We'll open your email app to confirm your RSVP to the organizers.</p>
+    <p class="note">We'll open your email app to confirm your RSVP to the organizers. You must press the "Send" button in your email for your RSVP to register.</p>
   </form>
 
   <div class="success" id="successMsg">
@@ -363,21 +336,6 @@
     For directions: <b>Deven Patel</b> (219) 628-2298 or <b>Sharad Patel</b> (219) 617-7752<br>
     Questions? <b>lapoindians@gmail.com</b>
   </p>
-
-  <button class="admin-toggle" id="adminToggle">View all RSVPs (organizers)</button>
-  <div class="admin" id="adminPanel">
-    <h3>All RSVPs</h3>
-    <div id="adminGate">
-      <p class="admin-empty" style="margin-bottom:0.7rem;">Enter the organizer passcode to view responses.</p>
-      <input type="password" id="adminPasscode" placeholder="Passcode" style="margin-bottom:0.6rem;">
-      <p class="err" id="adminPasscodeErr">Incorrect passcode.</p>
-      <button type="button" class="btn" id="adminUnlockBtn" style="margin-top:0.4rem;">Unlock</button>
-    </div>
-    <div id="adminContent" style="display:none;">
-      <div class="admin-count" id="adminCount"></div>
-      <div id="adminList"></div>
-    </div>
-  </div>
 
 </div>
 
@@ -473,69 +431,6 @@ document.getElementById('againBtn').addEventListener('click', ()=>{
   form.style.display = 'block';
   successMsg.classList.remove('show');
   ['name','mobile','email','adults','children'].forEach(id=> setError(id, false));
-});
-
-const adminToggle = document.getElementById('adminToggle');
-const adminPanel = document.getElementById('adminPanel');
-const adminGate = document.getElementById('adminGate');
-const adminContent = document.getElementById('adminContent');
-const adminPasscode = document.getElementById('adminPasscode');
-const adminUnlockBtn = document.getElementById('adminUnlockBtn');
-const adminList = document.getElementById('adminList');
-const adminCount = document.getElementById('adminCount');
-
-const ADMIN_PASSCODE = "@LapoGarba2026";
-let adminUnlocked = false;
-
-async function loadAdmin(){
-  adminList.innerHTML = '<p class="admin-empty">Loading…</p>';
-  try{
-    const snapshot = await rsvpCollection.orderBy('submittedAt', 'desc').get();
-    if(snapshot.empty){
-      adminList.innerHTML = '<p class="admin-empty">No RSVPs yet.</p>';
-      adminCount.textContent = '';
-      return;
-    }
-    const entries = [];
-    snapshot.forEach(doc => entries.push(doc.data()));
-    const totalPeople = entries.reduce((sum, e)=> sum + (parseInt(e.total)|| (parseInt(e.adults)||0)+(parseInt(e.children)||0)), 0);
-    adminCount.textContent = entries.length + ' RSVP' + (entries.length===1?'':'s') + ' · ' + totalPeople + ' people total';
-    adminList.innerHTML = entries.map(e =>
-      '<div class="admin-row"><span>' + e.name + ' (' + e.adults + 'A / ' + e.children + 'C)</span><span>' + e.mobile + '</span></div>'
-    ).join('');
-  }catch(err){
-    console.error('Firestore load error', err);
-    adminList.innerHTML = '<p class="admin-empty">Could not load RSVPs.</p>';
-  }
-}
-
-function tryUnlock(){
-  if(adminPasscode.value === ADMIN_PASSCODE){
-    adminUnlocked = true;
-    adminGate.style.display = 'none';
-    adminContent.style.display = 'block';
-    document.getElementById('adminPasscodeErr').classList.remove('show');
-    loadAdmin();
-  }else{
-    document.getElementById('adminPasscodeErr').classList.add('show');
-    adminPasscode.classList.add('bad');
-  }
-}
-
-adminUnlockBtn.addEventListener('click', tryUnlock);
-adminPasscode.addEventListener('keydown', (e)=>{
-  if(e.key === 'Enter'){ e.preventDefault(); tryUnlock(); }
-});
-adminPasscode.addEventListener('input', ()=>{
-  document.getElementById('adminPasscodeErr').classList.remove('show');
-  adminPasscode.classList.remove('bad');
-});
-
-adminToggle.addEventListener('click', ()=>{
-  const willShow = !adminPanel.classList.contains('show');
-  adminPanel.classList.toggle('show', willShow);
-  adminToggle.textContent = willShow ? 'Hide RSVPs' : 'View all RSVPs (organizers)';
-  if(willShow && adminUnlocked) loadAdmin();
 });
 </script>
 </body>
