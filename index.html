@@ -306,8 +306,7 @@
       <div>
         <label for="children">Children (age 12 &amp; below)<span class="req">*</span></label>
         <select id="children">
-          <option value="">Select</option>
-          <script>for(let i=0;i<=10;i++)document.write('<option value="'+i+'">'+i+(i===10?'+':'')+'</option>')</script>
+          <script>for(let i=0;i<=10;i++)document.write('<option value="'+i+'"'+(i===0?' selected':'')+'>'+i+(i===10?'+':'')+'</option>')</script>
         </select>
         <p class="err" id="childrenErr">Select number of children.</p>
       </div>
