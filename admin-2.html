@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Garba RSVP — Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Yeseva+One&family=Poppins:wght@400;500;600&display=swap');
+
+  :root{
+    --ink: #3A1140;
+    --marigold: #F5A623;
+    --marigold-deep: #E0790C;
+    --magenta-deep: #97165D;
+    --purple-deep: #2D1B4E;
+    --line: rgba(58,17,64,0.14);
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0;
+    font-family:'Poppins', sans-serif;
+    background: linear-gradient(180deg, #FDEBD3 0%, #FCE0C4 100%);
+    color: var(--ink);
+    min-height:100vh;
+  }
+  .wrap{ max-width: 980px; margin: 0 auto; padding: 2.2rem 1.2rem 3rem; }
+
+  h1{
+    font-family:'Yeseva One', serif;
+    font-size:1.7rem;
+    color: var(--purple-deep);
+    margin: 0 0 0.3rem;
+  }
+  .sub{
+    font-size:0.9rem;
+    color:#7A5A63;
+    margin: 0 0 1.6rem;
+  }
+
+  .gate{
+    max-width: 380px;
+    background:#FFFDF9;
+    border-radius:16px;
+    padding: 1.8rem 1.6rem;
+    box-shadow: 0 14px 30px rgba(90,20,20,0.12);
+  }
+  .gate label{
+    display:block;
+    font-size:0.8rem;
+    font-weight:600;
+    color: var(--purple-deep);
+    margin-bottom:0.5rem;
+  }
+  .gate input{
+    width:100%;
+    padding: 0.7rem 0.85rem;
+    border-radius: 10px;
+    border: 1.5px solid var(--line);
+    font-family:'Poppins', sans-serif;
+    font-size: 0.95rem;
+    background: #FFFAF3;
+    color: var(--ink);
+    margin-bottom: 0.6rem;
+  }
+  .gate input:focus{
+    outline:none;
+    border-color: var(--marigold-deep);
+    box-shadow: 0 0 0 3px rgba(224,121,12,0.15);
+  }
+  .err{
+    color: var(--magenta-deep);
+    font-size:0.8rem;
+    margin: 0 0 0.6rem;
+    display:none;
+  }
+  .err.show{ display:block; }
+  .btn{
+    padding: 0.75rem 1.4rem;
+    border:none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--marigold), var(--marigold-deep));
+    color:#3A1100;
+    font-family:'Poppins', sans-serif;
+    font-weight:600;
+    font-size:0.95rem;
+    cursor:pointer;
+    box-shadow: 0 6px 14px rgba(224,121,12,0.28);
+  }
+
+  .content{ display:none; }
+  .content.show{ display:block; }
+
+  .summary-bar{
+    display:flex;
+    gap:1rem;
+    flex-wrap:wrap;
+    margin-bottom:1.4rem;
+  }
+  .stat{
+    background:#FFFDF9;
+    border-radius:12px;
+    padding: 0.9rem 1.3rem;
+    box-shadow: 0 6px 16px rgba(90,20,20,0.08);
+    min-width:120px;
+  }
+  .stat .n{ font-family:'Yeseva One', serif; font-size:1.5rem; color: var(--magenta-deep); }
+  .stat .l{ font-size:0.75rem; color:#7A5A63; }
+
+  .table-card{
+    background:#FFFDF9;
+    border-radius:16px;
+    padding: 1.2rem;
+    box-shadow: 0 14px 30px rgba(90,20,20,0.1);
+    overflow-x:auto;
+  }
+  table{
+    width:100%;
+    border-collapse: collapse;
+    font-size:0.86rem;
+    min-width: 680px;
+  }
+  th{
+    text-align:left;
+    font-size:0.72rem;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+    color:#9A7A82;
+    padding: 0.5rem 0.7rem;
+    border-bottom: 2px solid var(--line);
+    white-space:nowrap;
+  }
+  td{
+    padding: 0.65rem 0.7rem;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  tr:last-child td{ border-bottom:none; }
+  tr:hover td{ background: #FFF7EC; }
+  .empty-row{ text-align:center; color:#9A7A82; padding: 2rem; }
+  .refresh{
+    display:inline-block;
+    margin-bottom:1rem;
+    font-size:0.82rem;
+    color:#B7627E;
+    background:none;
+    border:none;
+    text-decoration:underline;
+    cursor:pointer;
+    padding:0;
+  }
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <h1>Garba RSVP — Admin</h1>
+  <p class="sub">LaPorte / Porter County Garba · Friday, October 2, 2026</p>
+
+  <div class="gate" id="gate">
+    <label for="passcode">Organizer passcode</label>
+    <input type="password" id="passcode" placeholder="Enter passcode">
+    <p class="err" id="passErr">Incorrect passcode.</p>
+    <button class="btn" id="unlockBtn">Unlock</button>
+  </div>
+
+  <div class="content" id="content">
+    <button class="refresh" id="refreshBtn">↻ Refresh</button>
+    <button class="btn" id="exportBtn" style="margin-left:0.8rem; padding:0.5rem 1rem; font-size:0.85rem;">⬇ Download Excel</button>
+    <div class="summary-bar">
+      <div class="stat"><div class="n" id="statResponses">0</div><div class="l">RSVPs</div></div>
+      <div class="stat"><div class="n" id="statAdults">0</div><div class="l">Adults</div></div>
+      <div class="stat"><div class="n" id="statChildren">0</div><div class="l">Children</div></div>
+      <div class="stat"><div class="n" id="statTotal">0</div><div class="l">Total attending</div></div>
+    </div>
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>Mobile</th>
+            <th>Email</th>
+            <th>Adults</th>
+            <th>Children</th>
+            <th>Total</th>
+            <th>Submitted</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="8" class="empty-row">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDAZHh8mLZYy7sDIdkI798eQDPrznzeM4A",
+  authDomain: "lapo-garba-rsvp.firebaseapp.com",
+  projectId: "lapo-garba-rsvp",
+  storageBucket: "lapo-garba-rsvp.firebasestorage.app",
+  messagingSenderId: "965379213684",
+  appId: "1:965379213684:web:df6f0d648f1317820a4421"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const rsvpCollection = db.collection('rsvps');
+
+const ADMIN_PASSCODE = "@LapoGarba2026";
+
+const gate = document.getElementById('gate');
+const content = document.getElementById('content');
+const passcode = document.getElementById('passcode');
+const passErr = document.getElementById('passErr');
+const unlockBtn = document.getElementById('unlockBtn');
+const refreshBtn = document.getElementById('refreshBtn');
+const exportBtn = document.getElementById('exportBtn');
+const tableBody = document.getElementById('tableBody');
+let currentEntries = [];
+
+function fmtDate(iso){
+  try{
+    const d = new Date(iso);
+    return d.toLocaleString(undefined, { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+  }catch(e){ return iso || ''; }
+}
+
+async function loadData(){
+  tableBody.innerHTML = '<tr><td colspan="8" class="empty-row">Loading…</td></tr>';
+  try{
+    const snapshot = await rsvpCollection.orderBy('submittedAt', 'desc').get();
+    if(snapshot.empty){
+      currentEntries = [];
+      tableBody.innerHTML = '<tr><td colspan="8" class="empty-row">No RSVPs yet.</td></tr>';
+      document.getElementById('statResponses').textContent = '0';
+      document.getElementById('statAdults').textContent = '0';
+      document.getElementById('statChildren').textContent = '0';
+      document.getElementById('statTotal').textContent = '0';
+      return;
+    }
+    const entries = [];
+    snapshot.forEach(doc => entries.push(doc.data()));
+    currentEntries = entries;
+
+    let adultsSum = 0, childrenSum = 0;
+    entries.forEach(e=>{
+      adultsSum += parseInt(e.adults) || 0;
+      childrenSum += parseInt(e.children) || 0;
+    });
+
+    document.getElementById('statResponses').textContent = entries.length;
+    document.getElementById('statAdults').textContent = adultsSum;
+    document.getElementById('statChildren').textContent = childrenSum;
+    document.getElementById('statTotal').textContent = adultsSum + childrenSum;
+
+    tableBody.innerHTML = entries.map((e, i) => `
+      <tr>
+        <td>${i+1}</td>
+        <td>${e.name || ''}</td>
+        <td>${e.mobile || ''}</td>
+        <td>${e.email || ''}</td>
+        <td>${e.adults || 0}</td>
+        <td>${e.children || 0}</td>
+        <td>${e.total || (parseInt(e.adults)||0)+(parseInt(e.children)||0)}</td>
+        <td>${fmtDate(e.submittedAt)}</td>
+      </tr>
+    `).join('');
+  }catch(err){
+    console.error('Firestore load error', err);
+    currentEntries = [];
+    tableBody.innerHTML = '<tr><td colspan="8" class="empty-row">Could not load RSVPs.</td></tr>';
+  }
+}
+
+function exportToExcel(){
+  if(!currentEntries.length){
+    alert('No RSVP data to export yet.');
+    return;
+  }
+  const rows = currentEntries.map((e, i) => ({
+    '#': i+1,
+    'Name': e.name || '',
+    'Mobile': e.mobile || '',
+    'Email': e.email || '',
+    'Adults': parseInt(e.adults) || 0,
+    'Children': parseInt(e.children) || 0,
+    'Total': e.total || (parseInt(e.adults)||0)+(parseInt(e.children)||0),
+    'Submitted': fmtDate(e.submittedAt)
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{wch:4},{wch:22},{wch:15},{wch:28},{wch:8},{wch:9},{wch:8},{wch:18}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'RSVPs');
+  const dateStr = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, 'garba-rsvps-' + dateStr + '.xlsx');
+}
+
+function tryUnlock(){
+  if(passcode.value === ADMIN_PASSCODE){
+    gate.style.display = 'none';
+    content.classList.add('show');
+    loadData();
+  }else{
+    passErr.classList.add('show');
+  }
+}
+
+unlockBtn.addEventListener('click', tryUnlock);
+passcode.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){ e.preventDefault(); tryUnlock(); }
+});
+passcode.addEventListener('input', ()=> passErr.classList.remove('show'));
+refreshBtn.addEventListener('click', loadData);
+exportBtn.addEventListener('click', exportToExcel);
+</script>
+</body>
+</html>
